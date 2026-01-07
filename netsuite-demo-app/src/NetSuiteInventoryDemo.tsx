@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
+import { generateMockData } from './utils/mockDataGenerator';
 
 import { Play, FileText, CheckCircle, AlertTriangle, XCircle, RefreshCw, Download, Mail, Database, Settings } from 'lucide-react';
 
@@ -33,14 +34,26 @@ const NetSuiteInventoryDemo = () => {
   };
 
   // Sample transaction data
-  const sampleTransactions = [
-    { id: 'TXN001', type: 'Item Fulfillment', date: '2026-01-05', lotNumber: 'LOT-2024-001', unitNumber: 'UNIT-5678', item: 'Widget A', qty: 10, authorized: true },
-    { id: 'TXN002', type: 'Item Receipt', date: '2026-01-05', lotNumber: 'LOT-2024-001', unitNumber: 'UNIT-9999', item: 'Widget A', qty: 15, authorized: true },
-    { id: 'TXN003', type: 'Inventory Transfer', date: '2026-01-05', lotNumber: 'LOT-2024-002', unitNumber: 'UNIT-1111', item: 'Widget B', qty: 5, authorized: false },
-    { id: 'TXN004', type: 'Work Order', date: '2026-01-04', lotNumber: 'LOT-2024-001', unitNumber: 'UNIT-2222', item: 'Widget A', qty: 8, authorized: true },
-    { id: 'TXN005', type: 'Assembly Build', date: '2026-01-04', lotNumber: 'LOT-2024-003', unitNumber: 'UNIT-5678', item: 'Widget C', qty: 20, authorized: true },
-    { id: 'TXN006', type: 'Item Fulfillment', date: '2026-01-03', lotNumber: 'LOT-2024-002', unitNumber: 'UNIT-5678', item: 'Widget B', qty: 12, authorized: true }
-  ];
+  // State for transactions
+  const [transactions, setTransactions] = useState([]);
+
+  // Load initial data
+  useEffect(() => {
+    setTransactions(generateMockData(20));
+  }, []);
+
+  const regenerateData = () => {
+    const newData = generateMockData(25);
+    setTransactions(newData);
+    // Reset analysis data
+    setData(prev => ({
+      ...prev,
+      duplicates: [],
+      reports: [],
+      alerts: []
+    }));
+    addLog('info', 'Data Regenerated', 'New mock data set loaded');
+  };
 
   const addLog = (type, title, message) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -60,7 +73,7 @@ const NetSuiteInventoryDemo = () => {
       const lotCounts = {};
       const unitCounts = {};
 
-      sampleTransactions.forEach(txn => {
+      transactions.forEach(txn => {
         lotCounts[txn.lotNumber] = (lotCounts[txn.lotNumber] || 0) + 1;
         unitCounts[txn.unitNumber] = (unitCounts[txn.unitNumber] || 0) + 1;
       });
@@ -72,7 +85,7 @@ const NetSuiteInventoryDemo = () => {
             number: lot,
             count,
             priority: count > 2 ? 'CRITICAL' : 'HIGH',
-            items: sampleTransactions.filter(t => t.lotNumber === lot).map(t => t.item)
+            items: transactions.filter(t => t.lotNumber === lot).map(t => t.item)
           });
         }
       });
@@ -84,7 +97,7 @@ const NetSuiteInventoryDemo = () => {
             number: unit,
             count,
             priority: count > 2 ? 'CRITICAL' : 'HIGH',
-            items: sampleTransactions.filter(t => t.unitNumber === unit).map(t => t.item)
+            items: transactions.filter(t => t.unitNumber === unit).map(t => t.item)
           });
         }
       });
@@ -171,7 +184,7 @@ const NetSuiteInventoryDemo = () => {
     setTimeout(() => {
       const exceptions = {
         duplicates: data.duplicates.length,
-        unauthorized: sampleTransactions.filter(t => !t.authorized).length,
+        unauthorized: transactions.filter(t => !t.authorized).length,
         variances: 0,
         staleWO: 0
       };
@@ -179,7 +192,7 @@ const NetSuiteInventoryDemo = () => {
       addLog('audit', 'Checking Duplicates', `Found ${exceptions.duplicates} duplicates`);
       addLog('audit', 'Checking Unauthorized', `Found ${exceptions.unauthorized} unauthorized transfers`);
 
-      const unauthorizedTxns = sampleTransactions.filter(t => !t.authorized);
+      const unauthorizedTxns = transactions.filter(t => !t.authorized);
       if (unauthorizedTxns.length > 0) {
         const alert = {
           id: 'ALT-' + Date.now(),
@@ -234,7 +247,17 @@ const NetSuiteInventoryDemo = () => {
             </div>
             <Database className="w-16 h-16 text-blue-400" />
           </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={regenerateData}
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-blue-200 px-3 py-1.5 rounded-lg text-sm transition-all"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Regenerate Mock Data
+            </button>
+          </div>
         </div>
+
 
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-6 overflow-x-auto">
@@ -448,7 +471,7 @@ const NetSuiteInventoryDemo = () => {
                     </div>
                     <div className="bg-orange-500/20 p-4 rounded-lg border border-orange-500/50">
                       <div className="text-2xl font-bold text-white">
-                        {sampleTransactions.filter(t => !t.authorized).length}
+                        {transactions.filter(t => !t.authorized).length}
                       </div>
                       <div className="text-sm text-orange-200">Unauthorized</div>
                     </div>
@@ -478,7 +501,7 @@ const NetSuiteInventoryDemo = () => {
                   <div className="bg-black/20 p-4 rounded-lg">
                     <h3 className="text-lg font-semibold text-white mb-3">Recent Transactions</h3>
                     <div className="space-y-2">
-                      {sampleTransactions.map(txn => {
+                      {transactions.map(txn => {
                         const validation = validateTransaction(txn);
                         return (
                           <div key={txn.id} className={`p-3 rounded border ${validation.valid
@@ -584,6 +607,7 @@ const NetSuiteInventoryDemo = () => {
           </div>
         </div>
       </div>
+
     </div>
   );
 };
